@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Resume Scanner</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    select[multiple] {
+      height: 100px;
+      width: 100%;
+    }
+    .skill-btns {
+      margin-top: 10px;
+    }
+    .skill-btns button {
+      margin: 3px;
+      padding: 6px 12px;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .skill-btns button:hover {
+      background: #0cc;
+    }
+  </style>
+</head>
+<body>
+  <h1>💾 Resume Scanner 💾</h1>
+  <div class="container">
+    <form id="upload-form" enctype="multipart/form-data">
+      <input type="file" name="files[]" id="file-upload" multiple required />
+      <br/>
+      <label>Select Skills:</label>
+      <select id="skill-select" name="skill-select" multiple>
+        <option value="python">Python</option>
+        <option value="flask">Flask</option>
+        <option value="machine learning">Machine Learning</option>
+        <option value="deep learning">Deep Learning</option>
+        <option value="javascript">JavaScript</option>
+        <option value="sql">SQL</option>
+        <option value="excel">Excel</option>
+        <option value="node.js">Node.js</option>
+        <option value="react">React</option>
+        <option value="data structures">Data Structures</option>
+        <option value="algorithms">Algorithms</option>
+        <option value="c++">C++</option>
+        <option value="java">Java</option>
+        <option value="html">HTML</option>
+        <option value="css">CSS</option>
+        <option value="mongodb">MongoDB</option>
+        <option value="kubernetes">Kubernetes</option>
+        <option value="docker">Docker</option>
+      </select>
+
+      <div class="skill-btns">
+        <button type="button" onclick="selectCategorySkills()">Select CS Core Skills</button>
+        <button type="button" onclick="clearSkillSelection()">Clear Selection</button>
+      </div>
+
+      <br/>
+      <label>Custom Skills (comma-separated):</label>
+      <input type="text" id="custom-skills" placeholder="e.g. devops, cloud"/>
+      <br/>
+      <button type="submit">Scan Resumes</button>
+    </form>
+
+    <div id="results"></div>
+    <br/>
+    <a id="download-link" href="/download" style="display:none;">
+      <button>Download CSV</button>
+    </a>
+  </div>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    const resultsDiv = document.getElementById('results');
+    const downloadLink = document.getElementById('download-link');
+    const skillSelect = document.getElementById('skill-select');
+
+    function selectCategorySkills() {
+      const csSkills = [
+        "python", "java", "c++", "data structures", "algorithms",
+        "html", "css", "sql", "mongodb", "javascript", "react",
+        "node.js", "machine learning", "deep learning", "docker", "kubernetes"
+      ];
+      for (let i = 0; i < skillSelect.options.length; i++) {
+        if (csSkills.includes(skillSelect.options[i].value)) {
+          skillSelect.options[i].selected = true;
+        }
+      }
+    }
+
+    function clearSkillSelection() {
+      for (let i = 0; i < skillSelect.options.length; i++) {
+        skillSelect.options[i].selected = false;
+      }
+    }
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const files = document.getElementById('file-upload').files;
+      const customSkills = document.getElementById('custom-skills').value;
+      const selectedSkills = [...skillSelect.selectedOptions].map(o => o.value);
+
+      const formData = new FormData();
+      for (let file of files) formData.append('files[]', file);
+      formData.append('custom_skills', customSkills);
+      formData.append('selected_skills', selectedSkills.join(','));
+
+      const res = await fetch('/scan', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.results && data.results.length > 0) {
+        let html = '<table><tr><th>File</th><th>Skills</th><th>Match Score (%)</th></tr>';
+        data.results.forEach(r => {
+          html += `<tr><td>${r.file}</td><td>${r.skills.join(', ')}</td><td>${r.score}%</td></tr>`;
+        });
+        html += '</table>';
+        resultsDiv.innerHTML = html;
+        downloadLink.style.display = 'inline-block';
+      } else {
+        resultsDiv.innerHTML = '<p style="color:red;">No matching resumes found.</p>';
+        downloadLink.style.display = 'none';
+      }
+    };
+  </script>
+</body>
+</html>
